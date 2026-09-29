@@ -135,25 +135,39 @@ void QChatClient::handleLoginAck(const QJsonObject &js)
         m_friends.clear();
         const QJsonArray arr = js["friends"].toArray();
         for(const QJsonValue &v:arr){
-            const QJsonDocument doc=QJsonDocument::fromJson(v.toString().toUtf8());
-            if(!doc.isObject()){
+            if(!v.isObject()){
                 continue;
             }
-            const QJsonObject obj =doc.object();
+            const QJsonObject obj =v.toObject();
             User u;
             u.id    = obj["id"].toInt();
             u.name  = obj["name"].toString();
             u.state = obj["state"].toString();
-            m_friends.append(u);
+            m_friends.append(std::move(u));
+        }
+        const QJsonArray offArr = js["offlinemsg"].toArray();
+        for (const QJsonValue &v : offArr) {
+            if (!v.isObject()) continue;
+            const QJsonObject obj = v.toObject();
+            if (obj["msgid"].toInt() != PRIVATE_CHAT_MSG) continue;   // 只处理私聊
+            // 复用 handlePrivateChat 的组装逻辑
+            ChatMessage msg;
+            msg.msgid = obj["msgid"].toInt();
+            msg.id    = obj["id"].toInt();
+            msg.name  = obj["name"].toString();
+            msg.toid  = obj["toid"].toInt();
+            msg.msg   = obj["msg"].toString();
+            msg.time  = obj["time"].toString();
+            emit privateChatReceived(msg);
         }
     } else {
         m_myId = -1;
         m_myName.clear();
+        m_friends.clear();
     }
 
     emit loginResult(errno_, errmsg);
 }
-
 void QChatClient::handleRegAck(const QJsonObject &js)
 {
     const int errno_ = js["errno"].toInt();
@@ -163,5 +177,50 @@ void QChatClient::handleRegAck(const QJsonObject &js)
 }
 
 void QChatClient::handlePrivateChat(const QJsonObject &js){
+    ChatMessage msg;
+    msg.msgid = js["msgid"].toInt();
+    msg.id    = js["id"].toInt();
+    msg.name  = js["name"].toString();
+    msg.toid  = js["toid"].toInt();
+    msg.msg   = js["msg"].toString();
+    msg.time  = js["time"].toString();
+    emit privateChatReceived(msg);
+}
 
+void QChatClient::sendPrivateChat(int toid, const QString &msg)
+{
+    QJsonObject js;
+    js["msgid"] = PRIVATE_CHAT_MSG;
+    js["id"]    = m_myId;
+    js["name"]  = m_myName;
+    js["toid"]  = toid;
+    js["msg"]   = msg;
+    js["time"]  = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    write(packMsg(js));
+
+    //服务端只把私聊转发给接收方(toid), 不会回传给发送者,
+    //所以这里自己回显一份给界面, 否则"我发的消息"在界面上永远不显示。
+    //注意: 如果以后服务端也回传了, 这里要删掉, 否则会重复显示两条。
+    ChatMessage self;
+    self.msgid = PRIVATE_CHAT_MSG;
+    self.id    = m_myId;
+    self.name  = m_myName;
+    self.toid  = toid;
+    self.msg   = msg;
+    self.time  = js["time"].toString();//用同一个时间, 跟发给服务端的一致
+    emit privateChatReceived(self);
+}
+
+QList<User> QChatClient::friends() const
+{
+    return m_friends;
+}
+
+User QChatClient::friendById(int id) const
+{
+    for (const User &u : m_friends) {
+        if (u.id == id)
+            return u;
+    }
+    return User();//id 为默认值 -1 表示没找到
 }

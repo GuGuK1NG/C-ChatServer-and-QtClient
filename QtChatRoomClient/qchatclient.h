@@ -9,6 +9,7 @@
 #include <QByteArray>
 #include <QAbstractSocket>
 #include <QNetworkProxy>
+#include <QDateTime>
 #include "user.h"
 #include "protocol.h"
 class QChatClient:public QTcpSocket
@@ -21,9 +22,12 @@ public:
     void sendlogin(const QString& name,const QString& pwd);
     void sendreg(const QString& name,const QString& pwd);
     void sendlogout();
+    void sendPrivateChat(int toid, const QString &msg);
 
     int myId() const;
     QString myName() const;
+    QList<User> friends() const;
+    User friendById(int id) const;
 
 
 
@@ -43,6 +47,7 @@ private:
     void handleLoginAck(const QJsonObject &js);
     void handleRegAck(const QJsonObject &js);
     void handlePrivateChat(const QJsonObject &js);
+
 
     QByteArray m_buf;
     int m_myId = -1;
