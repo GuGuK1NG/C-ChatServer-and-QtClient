@@ -47,7 +47,7 @@ private:
     void handleLoginAck(const QJsonObject &js);
     void handleRegAck(const QJsonObject &js);
     void handlePrivateChat(const QJsonObject &js);
-
+    void consumeBuffer();//解决黏包问题
 
     QByteArray m_buf;
     int m_myId = -1;

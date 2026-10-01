@@ -80,13 +80,8 @@ QString QChatClient::myName() const
 
 void QChatClient::onReadyRead()
 {
-    QByteArray data=readAll();
-    QJsonDocument doc=QJsonDocument::fromJson(data);
-    if(!doc.isObject()){
-        qDebug()<<"解析失败!"<<data;
-        return;
-    }
-    dispatch(doc.object());
+    m_buf.append(readAll());
+    consumeBuffer();
 }
 
 void QChatClient::onSocketStateChanged(QAbstractSocket::SocketState s)
@@ -186,6 +181,62 @@ void QChatClient::handlePrivateChat(const QJsonObject &js){
     msg.time  = js["time"].toString();
     emit privateChatReceived(msg);
 }
+
+void QChatClient::consumeBuffer()
+{
+    int depth=0;
+    int start=0;
+    bool inString=false;
+    bool escaped=false;
+
+    int size=m_buf.size();
+    for(int i=0;i<size;++i){
+        const char c=m_buf.at(i);
+        if(inString){
+            if(escaped){
+                escaped=false;
+            }
+            else if(c=='\\'){
+                escaped=true;
+            }
+            else if(c=='"'){
+                inString=false;
+            }
+            continue;
+        }
+        if(c=='"'){
+            inString=true;
+        }
+        else if(c=='{'){
+            if(depth==0){
+                start=i;
+            }
+            depth++;
+        }
+        else if(c=='}'){
+            if(depth>0){
+                --depth;
+            }
+            if (depth == 0) {
+                // 配平了, 切出一条完整消息
+                const QByteArray chunk = m_buf.mid(start, i - start + 1);
+                QJsonParseError err;
+                const QJsonDocument doc = QJsonDocument::fromJson(chunk, &err);
+                if (err.error == QJsonParseError::NoError && doc.isObject())
+                    dispatch(doc.object());
+                else
+                    qWarning() << "丢弃无法解析的消息:" << chunk << err.errorString();
+            }
+        }
+    }
+    if(depth>0){
+        m_buf.remove(0,start);
+    }
+    else{
+        m_buf.clear();
+    }
+}
+
 
 void QChatClient::sendPrivateChat(int toid, const QString &msg)
 {
