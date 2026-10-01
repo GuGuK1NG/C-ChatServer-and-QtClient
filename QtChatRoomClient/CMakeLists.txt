@@ -13,8 +13,10 @@ qt_add_executable(QtChatRoomClient
     widget.ui
     protocol.h
     user.h
+    style.h
     qchatclient.h qchatclient.cpp
     logindialog.h logindialog.cpp logindialog.ui
+    mainwindow.h mainwindow.cpp mainwindow.ui
 )
 
 target_link_libraries(QtChatRoomClient
