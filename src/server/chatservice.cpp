@@ -104,11 +104,15 @@ void ChatService::login(const TcpConnectionPtr &conn, json &js, Timestamp time)
             vector<json> vec2;
             for (const auto &s:vec)
             {
-                
-                vec2.push_back(json::parse(s));
-                // 读取后删除
-                _offlineMsgModel.remove(id);
+                json one = json::parse(s,nullptr,false);
+                if(one.is_discarded()){
+                    LOG_ERROR << "parse json error: " << s;
+                    continue;
+                }
+                vec2.push_back(std::move(one));
             }
+            // 读取后删除
+            _offlineMsgModel.remove(id);
             response["offlinemsg"] = vec2;
             // 查询用户好友信息
             vector<User> userVec = _friendModel.query(id);

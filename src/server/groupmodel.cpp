@@ -58,8 +58,9 @@ vector<Group> GroupModel::queryGroups(int userid)
     }
     for (Group &group : groupVec)
     {
-        sprintf(sql, "select a.id,a.groupname,a.groupdesc from AllGroup a inner join\
-        GroupUser b on b.groupid=a.id where b.groupid=%d",
+        // 查该群的成员列表：从 User 表取成员 id/姓名，从 GroupUser 表取角色
+        sprintf(sql, "select a.id,a.name,b.role from User a inner join\
+        GroupUser b on a.id=b.userid where b.groupid=%d",
                 group.getId());
 
         MYSQL_RES *res = mysql.query(sql);
@@ -69,9 +70,9 @@ vector<Group> GroupModel::queryGroups(int userid)
             while ((row = mysql_fetch_row(res)) != nullptr)
             {
                 GroupUser user;
-                user.setId(atoi(row[0]));
-                user.setName(row[1]);
-                user.setRole(row[2]);
+                user.setId(atoi(row[0]));   // a.id   -> 成员id
+                user.setName(row[1]);       // a.name -> 成员名
+                user.setRole(row[2]);       // b.role -> 角色
                 group.getUsers().push_back(user);
             }
             mysql_free_result(res);

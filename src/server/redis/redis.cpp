@@ -7,10 +7,12 @@ Redis::~Redis()
     if (_publish_context != nullptr)
     {
         redisFree(_publish_context);
+        _publish_context = nullptr;
     }
     if (_subscribe_context != nullptr)
     {
-        redisFree(_publish_context);
+        redisFree(_subscribe_context);
+        _subscribe_context = nullptr;
     }
 }
 
