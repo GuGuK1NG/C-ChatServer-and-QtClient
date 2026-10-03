@@ -3,32 +3,35 @@
 
 bool GroupModel::createGroup(Group &group)
 {
+    MySQL mysql;
+    if (!mysql.connect())
+    {
+        return false;
+    }
     char sql[1024] = {0};
     sprintf(sql, "insert into AllGroup(groupname,groupdesc) values('%s','%s')",
-            group.getName().c_str(), group.getDesc().c_str());
+            mysql.escape(group.getName()).c_str(), mysql.escape(group.getDesc()).c_str());
 
-    MySQL mysql;
-    if (mysql.connect())
+    if (mysql.update(sql))
     {
-        if (mysql.update(sql))
-        {
-            group.setId(mysql_insert_id(mysql.getConnection()));
-            return true;
-        }
+        group.setId(mysql_insert_id(mysql.getConnection()));
+        return true;
     }
+
     return false;
 }
 void GroupModel::addGroup(int userid, int groupid, string role)
 {
+    MySQL mysql;
+    if (!mysql.connect())
+    {
+        return;
+    }
     char sql[1024] = {0};
     sprintf(sql, "insert into GroupUser values(%d,%d,'%s')",
-            groupid, userid, role.c_str());
+            groupid, userid, mysql.escape(role).c_str());
 
-    MySQL mysql;
-    if (mysql.connect())
-    {
-        mysql.update(sql);
-    }
+    mysql.update(sql);
 }
 vector<Group> GroupModel::queryGroups(int userid)
 {

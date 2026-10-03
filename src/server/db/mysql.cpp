@@ -51,3 +51,10 @@ MYSQL *MySQL::getConnection()
 {
     return _conn;
 }
+
+string MySQL::escape(const string &str)
+{
+        char buf[2 * str.length() + 1] = {0};
+        unsigned long len = mysql_real_escape_string(_conn, buf, str.c_str(), str.length());
+        return string(buf, len);
+}

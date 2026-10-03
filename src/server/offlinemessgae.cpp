@@ -3,19 +3,20 @@
 // 存储用户的离线消息
 void OfflineMessgaeModel::insert(int userid, string message)
 {
-    char sql[1024] = {0};
-    sprintf(sql, "insert into OfflineMessage values('%d','%s')", userid, message.c_str());
-
     MySQL mysql;
-    if (mysql.connect())
+    if (!mysql.connect())
     {
-        mysql.update(sql);
+        return;
     }
+    char sql[8192] = {0};
+    sprintf(sql, "insert into OfflineMessage values('%d','%s')", userid, mysql.escape(message).c_str());
+
+    mysql.update(sql);
 }
 // 删除
 void OfflineMessgaeModel::remove(int userid)
 {
-    char sql[1024] = {0};
+    char sql[8192] = {0};
     sprintf(sql, "delete from OfflineMessage where userid=%d", userid);
 
     MySQL mysql;

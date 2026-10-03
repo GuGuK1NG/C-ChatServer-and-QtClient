@@ -24,6 +24,8 @@ public:
     // 获取连接
     MYSQL *getConnection();
 
+    string escape(const string &str);
+    
 private:
     MYSQL *_conn;
 };
